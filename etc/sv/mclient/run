@@ -1,0 +1,5 @@
+#!/bin/sh
+fbset -depth 8
+fbset -depth 16
+omxplayer -srI --timeout 4 --live udp://0.0.0.0:8080 
+

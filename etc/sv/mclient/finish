@@ -1,0 +1,5 @@
+#!/bin/bash
+pkill omxplayer
+fbset -depth 8
+fbset -depth 16 
+
