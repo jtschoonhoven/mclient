@@ -8,7 +8,6 @@ SUPPORTED_VIDEO_EXTENSIONS="@(*.mp4|*.avi|*.mov|*.mkv|*.m4v|*.h264|*.264)"
 # commands
 REFRESH_DISPLAY="fbset -depth 8 && fbset -depth 16"
 TRY_PLAY_STREAM="omxplayer $OMX_OPTS --timeout $OMX_TIMEOUT --live udp://0.0.0.0:$PORT"
-MOUNT_USB="mount /dev/sda /mnt/usb"
 
 # ensure script is run as root
 if [ "$(id -u)" != "0" ]; then

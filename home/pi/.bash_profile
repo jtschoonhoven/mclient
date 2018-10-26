@@ -29,9 +29,11 @@ alias mhelp="less ~/mhelp.md"
 alias mstart="sudo sv start /etc/service/mclient"
 alias mstop="sudo sv stop /etc/service/mclient"
 alias mrestart="sudo sv restart /etc/service/mclient"
-alias mrun="/etc/service/mclient/run"
+alias mrun="sudo /etc/service/mclient/run"
 alias mterm="sudo pkill omxplayer"
 alias mstatus="sudo sv status /etc/service/mclient"
 alias mlog="sudo tail -F /var/log/mclient/current"
 alias mrefresh="fbset -depth 8 && fbset -depth 16"
-
+alias mblack="tput setaf 0 && clear"
+alias mwhite="tput setaf 15"
+mblack
