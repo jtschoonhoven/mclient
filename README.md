@@ -12,15 +12,9 @@ ssh pi@xxx.xxx.x.x
 
 # download and install dependencies
 git clone https://github.com/jtschoonhoven/mclient.git
-./mclient/setup.sh
+sudo ./mclient/install.sh
 
-# copy configuration
-# CAUTION: this overwrites .bashrc .bash_profile and dhcpcd.conf
-sudo cp -vr ./mclient/home/* /home
-sudo cp -vr ./mclient/etc/* /etc
-source .bash_profile
-
-# restart
+# restart to apply changes
 sudo reboot
 ```
 
