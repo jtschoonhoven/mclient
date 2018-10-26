@@ -33,6 +33,7 @@ mhelp    - print additional instructions
 mstart   - start background process
 mstop    - stop background process
 mrestart - restart background process
+mrun     - run process in the foreground
 mterm    - force kill background process
 mstatus  - show status of background process
 mlog     - tail background process logs

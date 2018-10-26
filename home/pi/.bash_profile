@@ -17,9 +17,10 @@ mhelp    - print additional instructions
 mstart   - start background process
 mstop    - stop background process
 mrestart - restart background process
+mrun     - run process in the foreground
 mterm    - force kill background process
 mstatus  - show status of background process
-mlog    - tail background process logs
+mlog     - tail background process logs
 mrefresh - refresh screen display
 
 EOF
@@ -28,6 +29,7 @@ alias mhelp="less ~/mhelp.md"
 alias mstart="sudo sv start /etc/service/mclient"
 alias mstop="sudo sv stop /etc/service/mclient"
 alias mrestart="sudo sv restart /etc/service/mclient"
+alias mrun="/etc/service/mclient/run"
 alias mterm="sudo pkill omxplayer"
 alias mstatus="sudo sv status /etc/service/mclient"
 alias mlog="sudo tail -F /var/log/mclient/current"

@@ -1,5 +1,76 @@
-#!/bin/sh
-fbset -depth 8
-fbset -depth 16
-omxplayer -srI --timeout 4 --live udp://0.0.0.0:8080 
+#!/bin/bash
+PORT=8080
+USB_PATH="/mnt/usb"
+OMX_OPTS="-srI"
+OMX_TIMEOUT="2"
+SUPPORTED_VIDEO_EXTENSIONS="@(*.mp4|*.avi|*.mov|*.mkv|*.m4v|*.h264|*.264)"
 
+# commands
+REFRESH_DISPLAY="fbset -depth 8 && fbset -depth 16"
+TRY_PLAY_STREAM="omxplayer $OMX_OPTS --timeout $OMX_TIMEOUT --live udp://0.0.0.0:$PORT"
+MOUNT_USB="mount /dev/sda /mnt/usb"
+
+# ensure script is run as root
+if [ "$(id -u)" != "0" ]; then
+  echo "permission denied (try sudo)"
+  exit 1
+fi
+
+echo "starting mclient"
+while true; do
+
+    # pass if video player is active
+    if ps ax | grep -v grep | grep omxplayer > /dev/null; then
+        echo "omxplayer already running"
+        sleep 1
+        continue
+    fi
+
+    # check network stream first
+    echo "checking UDP stream on $PORT"
+    eval $REFRESH_DISPLAY
+    eval $TRY_PLAY_STREAM
+
+    # then check USB drive
+    echo "checking for USB drive content at $USB_PATH"
+    if [ "$(ls -A $USB_PATH)" ]; then
+        for FILE_PATH in $USB_PATH/*; do
+
+            # skip if not a regular file
+            [ -f "$FILE_PATH" ] || continue
+
+            # skip unsupported file types
+            if [[ ! "$FILE_PATH" == $SUPPORTED_VIDEO_EXTENSIONS ]]; then
+                echo "file $FILE_PATH is not supported"
+                continue
+            fi
+
+            # play next video from disk
+            echo "playing $FILE_PATH"
+            eval $REFRESH_DISPLAY
+            omxplayer $OMX_OPTS "$FILE_PATH"
+
+            # check network stream between videos
+            echo "checking UDP stream on $PORT"
+            eval $REFRESH_DISPLAY
+            eval $TRY_PLAY_STREAM
+        done
+
+        continue
+    fi
+
+    # finally, if no USB content, attempt to mount available devices
+    echo "no contents in $USB_PATH: attempting mount"
+    for DRIVE_PATH in /dev/sda*; do
+
+        # skip if path is not a device file
+        [ -b "$DRIVE_PATH" ] || continue
+
+        # keep trying until mount succeeds
+        echo "mounting $DRIVE_PATH"
+        if mount "$DRIVE_PATH" "$USB_PATH"; then
+            break
+        fi
+
+    done
+done
