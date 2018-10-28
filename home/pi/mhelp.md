@@ -31,6 +31,16 @@ FFMPEG SIMPLE EXAMPLE:
 ffmpeg -re -i ./my-video.mp4 -c copy -f mpegts udp://xxx.xxx.x.x:8080
 ```
 
+FFMPEG MULTI-OUTPUT EXAMPLE:
+-------------------------
+
+```sh
+# stream to multiple IPs directly from ffmpeg
+ffmpeg -re -i ./my-video.mp4 -f tee -map 0:v \
+"[f=mpegts:onfail=ignore]udp://xxx.xxx.x.x:8080\
+|[f=mpegts:onfail=ignore]udp://xxx.xxx.x.x:8080"
+```
+
 FFMPEG ADVANCED EXAMPLE:
 ------------------------
 
