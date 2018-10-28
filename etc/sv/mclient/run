@@ -20,15 +20,18 @@ while true; do
 
     # pass if video player is active
     if ps ax | grep -v grep | grep omxplayer > /dev/null; then
-        echo "omxplayer already running"
-        sleep 1
+        echo "omxplayer already running: sleeping"
+        sleep 5
         continue
     fi
 
-    # check network stream first
+    # play video if UDP traffic is detected on $PORT
     echo "checking UDP stream on $PORT"
-    eval $REFRESH_DISPLAY
-    eval $TRY_PLAY_STREAM
+    if timeout --foreground 1 socat UDP-RECVFROM:8080 /dev/null; then
+        echo "UDP stream detected: attempting playback"
+        eval $REFRESH_DISPLAY
+        eval $TRY_PLAY_STREAM
+    fi
 
     # then check USB drive
     echo "checking for USB drive content at $USB_PATH"
@@ -51,8 +54,11 @@ while true; do
 
             # check network stream between videos
             echo "checking UDP stream on $PORT"
-            eval $REFRESH_DISPLAY
-            eval $TRY_PLAY_STREAM
+            if timeout --foreground 1 socat UDP-RECVFROM:8080 /dev/null; then
+                echo "UDP stream detected: attempting playback"
+                eval $REFRESH_DISPLAY
+                eval $TRY_PLAY_STREAM
+            fi
         done
 
         continue
