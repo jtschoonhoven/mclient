@@ -30,12 +30,12 @@ cp -vr ./mclient/etc/* /etc
 
 # initialize runit by symlinking /etc/service (if not exists)
 if [ ! -L /etc/service ]; then
-    ln -s /etc/sv/mclient /etc/service/mclient
+    ln -s /etc/sv /etc/service
 fi
 
 # source .bash_mclient from .bashrc if not already done
 if ! cat $BASHRC_PATH | grep "source /home/pi/.bash_mclient" >> /dev/null; then
-    echo $BASH_MCLIENT_PATH >> $BASHRC_PATH
+    echo "source $BASH_MCLIENT_PATH" >> $BASHRC_PATH
 fi
 
 echo "install completed successfully: please reboot to initialize mclient"
