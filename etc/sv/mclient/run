@@ -3,11 +3,14 @@ PORT=8080
 USB_PATH="/mnt/usb"
 OMX_OPTS="-srI"
 OMX_TIMEOUT="2"
+UDP_TIMEOUT="5"
 SUPPORTED_VIDEO_EXTENSIONS="@(*.mp4|*.avi|*.mov|*.mkv|*.m4v|*.h264|*.264)"
+SUPPORTED_IMAGE_EXTENTIONS='.png$|.jpg$'
 
 # commands
 REFRESH_DISPLAY="fbset -depth 8 && fbset -depth 16"
 TRY_PLAY_STREAM="omxplayer $OMX_OPTS --timeout $OMX_TIMEOUT --live udp://0.0.0.0:$PORT"
+START_SLIDESHOW="fbi --autozoom --timeout 30 --blend 1000 --noverbose --random -T 2 $USB_PATH/*{.jpg,.png}"
 
 # ensure script is run as root
 if [ "$(id -u)" != "0" ]; then
@@ -25,9 +28,19 @@ while true; do
         continue
     fi
 
+    # display slideshow images if available
+    echo "checking for image files in $USB_PATH"
+    if ls -l /mnt/usb/ | grep -iE $SUPPORTED_IMAGE_EXTENTIONS; then
+        echo "killing old image process"
+        pkill -9 fbi
+        echo "starting image slideshow from USB"
+        eval $REFRESH_DISPLAY
+        eval timeout --foreground $UDP_TIMEOUT $START_SLIDESHOW
+    fi
+
     # play video if UDP traffic is detected on $PORT
     echo "checking UDP stream on $PORT"
-    if timeout --foreground 1 socat UDP-RECVFROM:8080 /dev/null; then
+    if timeout --foreground $UDP_TIMEOUT socat UDP-RECVFROM:8080 /dev/null; then
         echo "UDP stream detected: attempting playback"
         eval $REFRESH_DISPLAY
         eval $TRY_PLAY_STREAM
@@ -52,9 +65,19 @@ while true; do
             eval $REFRESH_DISPLAY
             omxplayer $OMX_OPTS "$FILE_PATH"
 
+            # display slideshow images if available
+            echo "checking for image files in $USB_PATH"
+            if ls -l /mnt/usb/ | grep -iE $SUPPORTED_IMAGE_EXTENTIONS; then
+                echo "killing old image process"
+                pkill -9 fbi
+                echo "starting image slideshow from USB"
+                eval $REFRESH_DISPLAY
+                eval timeout --foreground $UDP_TIMEOUT $START_SLIDESHOW
+            fi
+
             # check network stream between videos
             echo "checking UDP stream on $PORT"
-            if timeout --foreground 1 socat UDP-RECVFROM:8080 /dev/null; then
+            if timeout --foreground $UDP_TIMEOUT socat UDP-RECVFROM:8080 /dev/null; then
                 echo "UDP stream detected: attempting playback"
                 eval $REFRESH_DISPLAY
                 eval $TRY_PLAY_STREAM

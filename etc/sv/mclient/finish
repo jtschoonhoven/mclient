@@ -1,6 +1,6 @@
 #!/bin/bash
-pkill omxplayer
+pkill -9 omxplayer
+pkill -9 fbi
 fbset -depth 8
 fbset -depth 16
 umount /dev/sda
-
