@@ -4,6 +4,7 @@ USB_PATH="/mnt/usb"
 OMX_OPTS="-srI"
 OMX_TIMEOUT="2"
 UDP_TIMEOUT="5"
+IMG_TIMEOUT="5"
 SUPPORTED_VIDEO_EXTENSIONS="@(*.mp4|*.avi|*.mov|*.mkv|*.m4v|*.h264|*.264)"
 SUPPORTED_IMAGE_EXTENTIONS='.png$|.jpg$'
 
@@ -22,7 +23,7 @@ echo "starting mclient"
 while true; do
 
     # pass if video player is active
-    if ps ax | grep -v grep | grep omxplayer > /dev/null; then
+    if pgrep omxplayer > /dev/null; then
         echo "omxplayer already running: sleeping"
         sleep 5
         continue
@@ -32,10 +33,11 @@ while true; do
     echo "checking for image files in $USB_PATH"
     if ls -l /mnt/usb/ | grep -iE $SUPPORTED_IMAGE_EXTENTIONS; then
         echo "killing old image process"
-        pkill -9 fbi
         echo "starting image slideshow from USB"
         eval $REFRESH_DISPLAY
-        eval timeout --foreground $UDP_TIMEOUT $START_SLIDESHOW
+        eval $START_SLIDESHOW
+        eval sleep $IMG_TIMEOUT
+        pkill -9 fbi
     fi
 
     # play video if UDP traffic is detected on $PORT
@@ -69,10 +71,11 @@ while true; do
             echo "checking for image files in $USB_PATH"
             if ls -l /mnt/usb/ | grep -iE $SUPPORTED_IMAGE_EXTENTIONS; then
                 echo "killing old image process"
-                pkill -9 fbi
                 echo "starting image slideshow from USB"
                 eval $REFRESH_DISPLAY
-                eval timeout --foreground $UDP_TIMEOUT $START_SLIDESHOW
+                eval $START_SLIDESHOW
+                eval sleep $IMG_TIMEOUT
+                pkill -9 fbi
             fi
 
             # check network stream between videos
