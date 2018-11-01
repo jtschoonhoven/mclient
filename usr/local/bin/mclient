@@ -190,39 +190,49 @@ unmount_drive() {
 play_slideshow_if_available() {
     local dirpath=${1:-$DEFAULT_USB_PATH}
     local img_timeout=${2:-$DEFAULT_IMG_TIMEOUT}
+    echo "playing slideshow if available"
     if ! has_supported_file $dirpath $SUPPORTED_IMAGE_EXTENSIONS; then
+        echo "slideshow not available: no supported files"
         return 1
     fi
     if process_is_active fbi; then
         kill_process fbi
     fi
+    echo "slideshow available: playing"
     play_slideshow "$dirpath"
     sleep_slideshow $img_timeout
     kill_process fbi
+    echo "slideshow end"
 }
 
 # play streamed media if receiving UDP traffic on given port
 play_stream_if_available() {
     local port=${1:-$DEFAULT_PORT}
     local udp_timeout=${2:-$DEFAULT_UDP_TIMEOUT}
+    echo "playing stream if available"
     if process_is_active omxplayer; then
         kill_process omxplayer
     fi
     if ! stream_is_available $port $udp_timeout; then
+        echo "stream not available: no UDP traffic"
         return 1
     fi
+    echo "stream available: playing"
     play_stream $port $udp_timeout
 }
 
 # play video file at given path if exists
 play_video_file_if_available() {
     local file_path=$1
+    echo "playing video file if available"
     if process_is_active omxplayer; then
         kill_process omxplayer
     fi
     if ! is_supported_file "$file_path" $SUPPORTED_VIDEO_EXTENSIONS; then
+        echo "video file not available: unsupported type"
         return 1
     fi
+    echo "video file is available: playing"
     play_video_file "$file_path"
 }
 
@@ -232,9 +242,12 @@ play_all_video_files_if_available() {
     local port=${2:-$DEFAULT_PORT}
     local udp_timeout=${3:-$DEFAULT_UDP_TIMEOUT}
     local img_timeout=${4:-$DEFAULT_IMG_TIMEOUT}
+    echo "playing all video files if available"
     if ! has_supported_file "$dirpath" $SUPPORTED_VIDEO_EXTENSIONS; then
+        echo "no video files available: no supported files"
         return 1
     fi
+    echo "video files available: starting loop"
     for file_path in $dirpath/*; do
         if ! is_supported_file "$file_path" $SUPPORTED_VIDEO_EXTENSIONS; then
             continue
@@ -243,14 +256,17 @@ play_all_video_files_if_available() {
         play_slideshow_if_available "$dirpath" $img_timeout
         play_stream_if_available $port $udp_timeout
     done
+    echo "finished playing available video files"
 }
 
 # attempt to mount each available drive until one succeeds
 mount_usb_if_available() {
     local mount_path=${1:-$DEFAULT_USB_PATH}
+    echo "mounting any available USB drive"
     for drive_path in /dev/sda*; do
         [ -b "$drive_path" ] || continue
         if mount_drive "$drive_path" "$mount_path"; then
+            echo "mounted available drive"
             return 0
         fi
     done
