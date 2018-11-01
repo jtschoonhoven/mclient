@@ -1,7 +1,7 @@
 MCLIENT
 =======
 
-Configuration for automatic media playback from USB and network sources.
+Raspberry Pi kiosk mode for automatic media playback from drive and network sources.
 
 The service starts automatically on boot, so you should not normally have to interact with it directly. The service that manages playback is lovingly known as `mclient`. Under the hood it's just a shell script that looks for media in an attached USB device and listens for streaming media. Media playback is delegated to the built-in `omxplayer`. The script is managed by `runit`.
 

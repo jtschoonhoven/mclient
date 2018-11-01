@@ -1,6 +1,6 @@
 # mclient
 
-Raspberry Pi configuration for easy, automatic media playback from USB and network sources.
+Raspberry Pi kiosk mode for automatic media playback from drive and network sources.
 
 ## Setup
 

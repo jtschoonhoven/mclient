@@ -1,0 +1,330 @@
+#!/bin/bash
+DEFAULT_PORT=8080
+DEFAULT_USB_PATH="/mnt/usb"
+DEFAULT_UDP_TIMEOUT="3"
+DEFAULT_IMG_TIMEOUT="4"
+SUPPORTED_IMAGE_EXTENSIONS=".png$|.jpg$"
+SUPPORTED_VIDEO_EXTENSIONS=".mp4$|.avi$|.mov$|.mkv$|.m4v$|.h264$|.264$"
+
+help() {
+cat << EOF
+DESCRIPTION
+    simple kiosk mode supporting media playback from drive and network sources
+
+USAGE
+    mclient [COMMAND] [OPTION]
+
+COMMANDS
+    help - display this menu
+    run - play mclient in a continuous loop
+
+OPTIONS
+    -d, --directory
+        path to directory containing media files (/mnt/usb)
+
+    -p, --port
+        port to listen to for UDP-streamed media (8080)
+
+    --udp-timeout
+        UDP TTL in seconds
+
+    --img-timeout
+        time to display images for in seconds
+
+EOF
+}
+
+# exit with error code 1 if current user is not root
+require_root() {
+    if [ "$(id -u)" != "0" ]; then
+      echo "permission denied (try sudo)" >&2
+      exit 1
+    fi
+}
+
+# reset display frame buffer to recover from omxplayer blank screen bug
+refresh_display() {
+    echo "refreshing display"
+    fbset -depth 8
+    fbset -depth 16
+    echo "refreshed display"
+}
+
+# return OK (code 0) if named process is active
+process_is_active() {
+    local process_name=$1
+    echo "checking if $process_name is active"
+    local active_processes=$(pgrep $process_name | wc -l)
+    if [ $active_processes == 0 ]; then
+        echo "$process_name is not active"
+        return 1
+    fi
+    echo "$process_name is active"
+}
+
+# kill named process (signal 9) and return OK (code 0) on success
+kill_process() {
+    local process_name=$1
+    echo "killing $process_name"
+    pkill -9 $process_name
+    if process_is_active $process_name; then
+        echo "failed to kill $process_name" >&2
+        return 1
+    fi
+    echo "successfully killed $process_name"
+}
+
+# return OK (code 0) if given path is to a regular file matching (optional) regex pattern
+is_supported_file() {
+    local file_path=$1
+    local pattern=$2
+    echo "checking if \"$file_path\" is a regular file"
+    if ! [ -f "$file_path" ]; then
+        echo "not a regular file"
+        return 1
+    fi
+    echo "checking if file \"$file_path\" is supported"
+    if ! [[ "$file_path" =~ $pattern ]]; then
+        echo "file is not supported"
+        return 1
+    fi
+    echo "file is supported"
+}
+
+# return OK (code 0) if given directory is empty or file path does not exist
+is_empty() {
+    local dirpath=$1
+    echo "checking if path \"$dirpath\" is empty"
+    if [ "$(ls -A $dirpath 2> /dev/null)" ]; then
+        echo "path is not empty"
+        return 1
+    fi
+    echo "path is empty"
+}
+
+# return OK (code 0) if given directory has any files matching (optional) regex pattern
+has_supported_file() {
+    local dirpath=$1
+    local pattern=$2
+    echo "checking if \"$dirpath\"has supported files matching \"$pattern\""
+    local num_matches=$(ls "$dirpath" | grep -iE "$pattern" | wc -l)
+    if [ $num_matches == 0 ]; then
+        echo "no supported files"
+        return 1
+    fi
+    echo "USB has $num_matches supported files"
+}
+
+# return OK (code 0) if receives UDP traffic on given port within timeout
+stream_is_available() {
+    local port=${1:-$DEFAULT_PORT}
+    local udp_timeout=${2:-$DEFAULT_UDP_TIMEOUT}
+    echo "checking if media stream is available on port $port"
+    if ! timeout --foreground $udp_timeout socat UDP-RECVFROM:$port /dev/null; then
+        echo "media stream not available"
+        return 1
+    fi
+    echo "media stream available"
+}
+
+# play streamed media from UDP traffic on given port
+play_stream() {
+    local port=${1:-$DEFAULT_PORT}
+    local udp_timeout=${2:-$DEFAULT_UDP_TIMEOUT}
+    refresh_display
+    echo "streaming media from port $port"
+    omxplayer -srI --live --timeout $udp_timeout udp://0.0.0.0:$port
+    echo "ended media stream"
+}
+
+# play video file at given path
+play_video_file() {
+    local file_path=$1
+    refresh_display
+    echo "playing video \"$file_path\""
+    omxplayer -srI "$file_path"
+    echo "ended video"
+}
+
+# display slideshow of all supported images in given directory
+play_slideshow() {
+    local dirpath=${1:-$DEFAULT_USB_PATH}
+    refresh_display
+    echo "starting slideshow of all supported images in $dirpath"
+    fbi -a -T 2 --timeout 30 --blend 1000 --noverbose --random $dirpath/*{.jpg,.png}
+    echo "started slideshow"
+}
+
+# sleep for the given number of seconds while slideshow plays
+sleep_slideshow() {
+    local img_timeout=${1:-$DEFAULT_IMG_TIMEOUT}
+    echo "sleeping on slideshow for $img_timeout seconds"
+    sleep $img_timeout
+    echo "sleep ended"
+}
+
+# attempt to mount a USB device at given path (drive path should match /dev/sda*)
+mount_drive() {
+    local drive_path=$1
+    local usb_path=${2:-$DEFAULT_USB_PATH}
+    echo "mounting drive \"$drive_path\" to \"$usb_path\""
+    if ! mount "$drive_path" "$usb_path" 2> /dev/null; then
+        echo "mount failed" >&2
+        return 1
+    fi
+    echo "mount successful"
+}
+
+# attempt to unmount a device at the given path
+unmount_drive() {
+    local drive_path=${1:-$DEFAULT_USB_PATH}
+    echo "unmounting drive at $drive_path"
+    if ! umount "$drive_path"; then
+        echo "unmount failed" >&2
+        return 1
+    fi
+    echo "unmount successful"
+}
+
+# display slideshow if supported images exist in directory
+play_slideshow_if_available() {
+    local dirpath=${1:-$DEFAULT_USB_PATH}
+    local img_timeout=${2:-$DEFAULT_IMG_TIMEOUT}
+    if ! has_supported_file $dirpath $SUPPORTED_IMAGE_EXTENSIONS; then
+        return 1
+    fi
+    if process_is_active fbi; then
+        kill_process fbi
+    fi
+    play_slideshow "$dirpath"
+    sleep_slideshow $img_timeout
+    kill_process fbi
+}
+
+# play streamed media if receiving UDP traffic on given port
+play_stream_if_available() {
+    local port=${1:-$DEFAULT_PORT}
+    local udp_timeout=${2:-$DEFAULT_UDP_TIMEOUT}
+    if process_is_active omxplayer; then
+        kill_process omxplayer
+    fi
+    if ! stream_is_available $port $udp_timeout; then
+        return 1
+    fi
+    play_stream $port $udp_timeout
+}
+
+# play video file at given path if exists
+play_video_file_if_available() {
+    local file_path=$1
+    if process_is_active omxplayer; then
+        kill_process omxplayer
+    fi
+    if ! is_supported_file "$file_path" $SUPPORTED_VIDEO_EXTENSIONS; then
+        return 1
+    fi
+    play_video_file "$file_path"
+}
+
+# play each supported file in directory (if exists) alternating with slideshow and stream
+play_all_video_files_if_available() {
+    local dirpath=${1:-$DEFAULT_USB_PATH}
+    local port=${2:-$DEFAULT_PORT}
+    local udp_timeout=${3:-$DEFAULT_UDP_TIMEOUT}
+    local img_timeout=${4:-$DEFAULT_IMG_TIMEOUT}
+    if ! has_supported_file "$dirpath" $SUPPORTED_VIDEO_EXTENSIONS; then
+        return 1
+    fi
+    for file_path in $dirpath/*; do
+        if ! is_supported_file "$file_path" $SUPPORTED_VIDEO_EXTENSIONS; then
+            continue
+        fi
+        play_video_file_if_available "$file_path"
+        play_slideshow_if_available "$dirpath" $img_timeout
+        play_stream_if_available $port $udp_timeout
+    done
+}
+
+# attempt to mount each available drive until one succeeds
+mount_usb_if_available() {
+    local mount_path=${1:-$DEFAULT_USB_PATH}
+    for drive_path in /dev/sda*; do
+        [ -b "$drive_path" ] || continue
+        if mount_drive "$drive_path" "$mount_path"; then
+            return 0
+        fi
+    done
+    echo "failed to mount any drive in /dev/sda*" >&2
+    return 1
+}
+
+cleanup() {
+    local usb_path=${1:-$DEFAULT_USB_PATH}
+    echo "cleaning up mclient processes"
+    kill_process omxplayer
+    kill_process fbi
+    refresh_display
+    unmount_drive "$usb_path"
+    kill_process mclient
+    exit 1
+}
+
+run() {
+    local usb_path=${1:-$DEFAULT_USB_PATH}
+    local port=${2:-$DEFAULT_PORT}
+    local udp_timeout=${3:-$DEFAULT_UDP_TIMEOUT}
+    local img_timeout=${4:-$DEFAULT_IMG_TIMEOUT}
+    require_root
+    echo "starting mclient"
+    while true; do
+        play_slideshow_if_available "$usb_path" $img_timeout
+        play_stream_if_available $port $udp_timeout
+        play_all_video_files_if_available "$usb_path" $port $udp_timeout $img_timeout
+        if is_empty "$usb_path"; then
+            mount_usb_if_available "$usb_path"
+        fi
+    done
+}
+
+# parse args https://medium.com/@Drew_Stokes/bash-argument-parsing-54f3b81a6a8f
+PARAMS=""
+while (( "$#" )); do
+    case "$1" in
+        -d|--directory)
+            usb_path="$2"
+            shift 2
+            ;;
+        -p|--port)
+            port=$2
+            shift 2
+            ;;
+        -ut|--udp-timeout)
+            udp_timeout=$2
+            shift 2
+            ;;
+        -it|--img-timeout)
+            img_timeout=$2
+            shift 2
+            ;;
+        --) # end argument parsing
+            shift
+            break
+            ;;
+        -*|--*=) # unsupported flags
+            echo "invalid option $1" >&2
+            help
+            exit 1
+            ;;
+        *) # preserve positional arguments
+            command="$PARAMS $1"
+            shift
+            ;;
+    esac
+done
+
+# validate command and execute
+if [ -z $command ]; then
+    echo "please specify a valid command" >&2
+    exit 1
+fi
+eval $command $usb_path $port $udp_timeout $img_timeout

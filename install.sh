@@ -1,7 +1,7 @@
 #!/bin/sh
 BASHRC_PATH="/home/pi/.bashrc"
 BASH_MCLIENT_PATH="/home/pi/.bash_mclient"
-DEPENDENCIES="runit runit-systemd vim x11-xserver-utils socat fbi"
+DEPENDENCIES="git runit runit-systemd vim x11-xserver-utils socat fbi"
 
 # exit on failure
 set -e
@@ -14,19 +14,22 @@ fi
 
 # install each package if not exists
 for PACKAGE in $DEPENDENCIES; do
-    if ! dpkg-query -l "$PACKAGE" >> /dev/null; then
+    if ! dpkg-query -l "$PACKAGE" > /dev/null; then
         apt-get -y install "$PACKAGE"
     else
         echo "$PACKAGE is already installed"
     fi
 done
 
-# copy user files to device
-cd /home/pi
+# create required directories if not exist
 mkdir -p /mnt/usb
+mkdir -p /etc/sv/mclient
 mkdir -p /var/log/mclient
-cp -vr /home/pi/mclient/home/* /home
-cp -vr ./mclient/etc/* /etc
+
+# copy files to device
+cp -vr /home/pi/mclient/home/pi /home
+cp -vr /home/pi/mclient/etc/sv/mclient /etc/sv
+cp -vr /home/pi/mclient/usr/local/bin /usr/local
 
 # initialize runit by symlinking /etc/service (if not exists)
 if [ ! -L /etc/service ]; then
