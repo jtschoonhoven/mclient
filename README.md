@@ -10,17 +10,26 @@ Copy all files in this directory to a Raspberry Pi with a fresh install of Raspb
 # ssh to Raspberry Pi
 ssh pi@xxx.xxx.x.x
 
-# download and install dependencies
+# download and install mclient
+cd /home/pi
 git clone https://github.com/jtschoonhoven/mclient.git
-sudo ./mclient/install.sh
 
-# restart to apply changes
+# install mclient to /usr/local/bin
+sudo ./mclient/install_client
+
+# optionally set a static IP (overwrites /etc/dhcpcd.conf)
+sudo ./mclient/install_static_ip --subnet xxx --host xxx
+
+# optionally install service to run mclient forever in background
+sudo ./mclient/install_service
+
+# reboot to apply all changes
 sudo reboot
 ```
 
 ## Usage
 
-After install and reboot, `mclient` will always be running in the background. Media will be displayed full-screen when detected.
+After service install and reboot, `mclient` will always be running in the background. Media will be displayed full-screen when detected.
 
 ```
 mhelp    - print additional instructions
@@ -34,4 +43,4 @@ mlog     - tail background process logs
 mrefresh - refresh screen display
 ```
 
-See [mhelp.md](https://github.com/jtschoonhoven/mclient/blob/master/home/pi/mhelp.md) for more info.
+See [mhelp.md](https://github.com/jtschoonhoven/mclient/blob/master/home/pi/mclient_help.md) for more info.

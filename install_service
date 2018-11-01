@@ -1,7 +1,7 @@
-#!/bin/sh
+#!/bin/bash
+DEPENDENCIES="vim runit runit-systemd"
 BASHRC_PATH="/home/pi/.bashrc"
 BASH_MCLIENT_PATH="/home/pi/.bash_mclient"
-DEPENDENCIES="git runit runit-systemd vim x11-xserver-utils socat fbi"
 
 # exit on failure
 set -e
@@ -21,19 +21,18 @@ for PACKAGE in $DEPENDENCIES; do
     fi
 done
 
-# create required directories if not exist
-mkdir -p /mnt/usb
+# create directories and files used by runit
 mkdir -p /etc/sv/mclient
 mkdir -p /var/log/mclient
+touch /var/log/mclient/current
 
-# copy files to device
+# copy runit config to device
 cp -vr /home/pi/mclient/home/pi /home
 cp -vr /home/pi/mclient/etc/sv/mclient /etc/sv
-cp -vr /home/pi/mclient/usr/local/bin /usr/local
 
 # initialize runit by symlinking /etc/service (if not exists)
-if [ ! -L /etc/service ]; then
-    ln -s /etc/sv /etc/service
+if [ ! -d /etc/service/mclient ]; then
+    ln -s /etc/sv/mclient /etc/service/mclient
 fi
 
 # source .bash_mclient from .bashrc if not already done
@@ -41,4 +40,5 @@ if ! cat $BASHRC_PATH | grep "source /home/pi/.bash_mclient" >> /dev/null; then
     echo "source $BASH_MCLIENT_PATH" >> $BASHRC_PATH
 fi
 
-echo "install completed successfully: please reboot to initialize mclient"
+echo "install completed successfully"
+echo "please reboot to initialize mclient service"

@@ -1,0 +1,29 @@
+#!/bin/bash
+DEPENDENCIES="x11-xserver-utils socat fbi"
+
+# exit on failure
+set -e
+
+# ensure script is run as root
+if [ "$(id -u)" != "0" ]; then
+  echo "permission denied (try sudo)"
+  exit 1
+fi
+
+# install each package if not exists
+for PACKAGE in $DEPENDENCIES; do
+    if ! dpkg-query -l "$PACKAGE" > /dev/null; then
+        apt-get -y install "$PACKAGE"
+    else
+        echo "$PACKAGE is already installed"
+    fi
+done
+
+# create USB mount directory
+mkdir -p /mnt/usb
+
+# copy script to /usr/local/bin
+cp -vr /home/pi/mclient/usr/local/bin /usr/local
+
+echo "install completed successfully"
+echo "try \"mclient help\" for more info"
