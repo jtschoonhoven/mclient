@@ -4,6 +4,18 @@ DEFAULT_SUBNET="1"
 # exit on failure
 set -e
 
+help() {
+cat << EOF
+
+DESCRIPTION
+    overwrite network config to set static IP in /etc/dhcpcd.conf
+
+USAGE
+    ./set_static_ip --host 254 --subnet 1
+
+EOF
+}
+
 # ensure script is run as root
 if [ "$(id -u)" != "0" ]; then
   echo "permission denied (try sudo)"
@@ -36,6 +48,7 @@ done
 # host is always required
 if [ -z $HOST ]; then
     echo "ERROR: --host (-h) is a required argument" >&2
+    help
     exit 1
 fi
 
@@ -85,3 +98,12 @@ static ip_address=192.168.$SUBNET.$HOST/24
 static routers=192.168.$SUBNET.1
 static domain_name_servers=192.168.$SUBNET.1
 EOF
+
+echo "flushing IP addresses"
+ip addr flush dev eth0
+
+echo "restarting network interfaces"
+ifdown --all
+ifup --all
+
+echo "success"
