@@ -1,6 +1,8 @@
 # mclient
 
-Raspberry Pi kiosk mode for automatic media playback from drive and network sources.
+Raspberry Pi kiosk mode for live-broadcast and looping video playback.
+
+Plays media from a USB drive in a loop. Automatically switches to streaming live-broadcast video when available.
 
 ## Setup
 
