@@ -17,9 +17,6 @@ git clone https://github.com/jtschoonhoven/mclient.git
 # install mclient to /usr/local/bin
 sudo ./mclient/install_client
 
-# optionally set a static IP (overwrites /etc/dhcpcd.conf)
-sudo ./mclient/install_static_ip --subnet xxx --host xxx
-
 # optionally install service to run mclient forever in background
 sudo ./mclient/install_service
 
