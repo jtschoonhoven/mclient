@@ -71,6 +71,10 @@ EOF
 
 echo "applying changes"
 echo "WARNING: if you are connected by SSH, this will drop your connection"
+wpa_cli -i eth0 reconfigure
 wpa_cli -i wlan0 reconfigure
 
+echo "restarting network interfaces"
+ifdown --all
+ifup --all
 echo "success"
