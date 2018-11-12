@@ -1,0 +1,90 @@
+#!/bin/bash
+DEFAULT_PORT=8080
+DEFAULT_INPUT=0
+BROADCAST_CMD='
+    ffmpeg
+    -f avfoundation
+    -s 1280x720
+    -pix_fmt uyvy422
+    -framerate 15
+    -i "${INPUT_ID}"
+    -vcodec libx264
+    -pix_fmt yuv420p
+    -preset ultrafast
+    -tune zerolatency
+    -thread_type slice
+    -slices 1
+    -intra-refresh 1
+    -b:v 400KB
+    -s 1280x720
+    -r 15
+    -g 30
+    -f tee
+    -map 0:v
+    "
+'
+
+# exit on failure
+set -e
+
+help() {
+cat << EOF
+
+DESCRIPTION
+    convenience script to broadcast video over the network using ffmpeg
+
+USAGE
+    ./broadcast --input 0 --port 8080 --host 127.0.0.1 --host 127.0.0.2
+
+EOF
+}
+
+# parse args https://medium.com/@Drew_Stokes/bash-argument-parsing-54f3b81a6a8f
+while (( "$#" )); do
+    case "$1" in
+        -i|--input)
+            INPUT_ID=$2
+            shift 2
+            ;;
+        -p|--port)
+            PORT=$2
+            shift 2
+            ;;
+        -h|--host)
+            HOST=$2
+            HOSTMAP_ENTRY="[f=mpegts:onfail=ignore]udp://${HOST}:\${PORT}"
+            BROADCAST_CMD="${BROADCAST_CMD}${HOSTMAP_ENTRY}|"
+            shift 2
+            ;;
+        --) # end argument parsing
+            shift
+            break
+            ;;
+        -*|--*=) # unsupported flags
+            echo "invalid option $1" >&2
+            help
+            exit 1
+            ;;
+    esac
+done
+
+# at least one host is required
+if [ -z $HOST ]; then
+    echo "ERROR: --host (-h) is a required argument" >&2
+    help
+    exit 1
+fi
+
+# use default if port is not specified
+if [ -z $PORT ]; then
+    PORT=$DEFAULT_PORT
+fi
+
+# use default if input ID is not specified
+if [ -z $INPUT_ID ]; then
+    INPUT_ID=$DEFAULT_INPUT
+fi
+
+# add closing double quote and execute
+BROADCAST_CMD="${BROADCAST_CMD}\""
+eval ${BROADCAST_CMD}
