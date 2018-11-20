@@ -4,6 +4,8 @@ Raspberry Pi kiosk mode for live-broadcast and looping video playback.
 
 Plays media from a USB drive in a loop. Automatically switches to streaming live-broadcast video when available.
 
+![screenshot](https://i.imgur.com/I5h22zX.png)
+
 ## Setup
 
 Copy all files in this directory to a Raspberry Pi with a fresh install of Raspbian OS.
